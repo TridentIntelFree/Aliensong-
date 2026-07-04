@@ -1,0 +1,599 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>APEIRON — the eternal object</title>
+<style>
+  :root {
+    --void:    #0D0B16;
+    --deep:    #16122A;
+    --bone:    #E9E3D3;
+    --dim:     #8B8499;
+    --cheren:  #9FD8E8;  /* Cherenkov — torus / zeta light */
+    --ember:   #C98A3D;  /* prime events */
+    --line:    #2A2440;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html, body {
+    height:100%; overflow:hidden;
+    background: var(--void);
+    color: var(--bone);
+    font-family: Menlo, Monaco, "Courier New", monospace;
+    -webkit-user-select:none; user-select:none;
+    touch-action: manipulation;
+  }
+  #stage { position:fixed; inset:0; width:100%; height:100%; display:block; }
+
+  /* ---------- title ---------- */
+  #masthead {
+    position:fixed; top:calc(env(safe-area-inset-top, 0px) + 14px);
+    left:0; right:0; text-align:center; pointer-events:none; z-index:5;
+  }
+  #masthead h1 {
+    font-family: Palatino, "Palatino Linotype", Georgia, serif;
+    font-weight: 400; font-style: italic;
+    font-size: 30px; letter-spacing: 0.42em; text-indent: 0.42em;
+    color: var(--bone);
+  }
+  #masthead .sub {
+    margin-top:6px; font-size:9px; letter-spacing:0.3em; text-indent:0.3em;
+    color: var(--dim); text-transform: uppercase;
+  }
+
+  /* ---------- telemetry ---------- */
+  #telemetry {
+    position:fixed; left:0; right:0;
+    bottom: calc(env(safe-area-inset-bottom, 0px) + 12px);
+    z-index:5; padding: 0 14px; pointer-events:none;
+  }
+  .telrow {
+    display:flex; justify-content:space-between; align-items:baseline;
+    font-size:10px; line-height:1.9; color: var(--dim);
+    border-top: 1px solid var(--line); padding-top:2px; margin-top:2px;
+  }
+  .telrow b { color: var(--bone); font-weight:400; }
+  .telrow .cheren { color: var(--cheren); }
+  .telrow .ember  { color: var(--ember); }
+  #telemetry .controls { pointer-events:auto; }
+
+  /* ---------- gate (start) ---------- */
+  #gate {
+    position:fixed; inset:0; z-index:20;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    background: radial-gradient(ellipse at 50% 40%, var(--deep) 0%, var(--void) 70%);
+    text-align:center; padding:28px; cursor:pointer;
+  }
+  #gate .glyph {
+    font-family: Palatino, Georgia, serif; font-style:italic;
+    font-size: 64px; color: var(--cheren); line-height:1;
+    text-shadow: 0 0 40px rgba(159,216,232,0.35);
+  }
+  #gate h1 {
+    font-family: Palatino, Georgia, serif; font-style:italic; font-weight:400;
+    font-size: 34px; letter-spacing:0.42em; text-indent:0.42em; margin-top:22px;
+  }
+  #gate p.creed {
+    max-width: 340px; margin-top:18px;
+    font-family: Palatino, Georgia, serif; font-style:italic;
+    font-size: 14px; line-height:1.75; color: var(--dim);
+  }
+  #gate .enter {
+    margin-top:30px; font-size:10px; letter-spacing:0.35em; text-indent:0.35em;
+    color: var(--ember); text-transform:uppercase;
+    animation: breathe 3.4s ease-in-out infinite;
+  }
+  @keyframes breathe { 0%,100%{opacity:0.45} 50%{opacity:1} }
+  @media (prefers-reduced-motion: reduce) { #gate .enter { animation:none; opacity:0.85 } }
+
+  /* ---------- notes panel ---------- */
+  #notesBtn, #scrubBtn {
+    pointer-events:auto;
+    background:none; border:1px solid var(--line); color:var(--dim);
+    font-family:inherit; font-size:9px; letter-spacing:0.25em; text-indent:0.25em;
+    text-transform:uppercase; padding:7px 10px 7px 12px; margin-right:8px;
+    border-radius:2px;
+  }
+  #notesBtn:active, #scrubBtn:active { color:var(--bone); border-color:var(--dim); }
+  #notes {
+    position:fixed; inset:0; z-index:30; display:none;
+    background: rgba(13,11,22,0.97);
+    overflow-y:auto; -webkit-overflow-scrolling:touch;
+    padding: calc(env(safe-area-inset-top,0px) + 26px) 24px 60px;
+  }
+  #notes.open { display:block; }
+  #notes h2 {
+    font-family: Palatino, Georgia, serif; font-style:italic; font-weight:400;
+    font-size:22px; letter-spacing:0.2em; margin-bottom:18px; color:var(--bone);
+  }
+  #notes h3 {
+    font-size:10px; letter-spacing:0.3em; text-transform:uppercase;
+    color:var(--ember); margin:22px 0 8px;
+  }
+  #notes p {
+    font-family: Palatino, Georgia, serif;
+    font-size:14px; line-height:1.8; color:#C9C2B2; margin-bottom:10px;
+  }
+  #notes .thm {
+    border-left: 2px solid var(--cheren); padding-left:12px;
+    font-style:italic; color: var(--cheren);
+  }
+  #notes .close {
+    position:fixed; top:calc(env(safe-area-inset-top,0px) + 14px); right:16px;
+    font-size:20px; color:var(--dim); background:none; border:none; padding:8px;
+  }
+
+  /* ---------- scrub panel ---------- */
+  #scrub {
+    position:fixed; left:14px; right:14px;
+    bottom: calc(env(safe-area-inset-bottom,0px) + 110px);
+    z-index:25; display:none;
+    background: rgba(22,18,42,0.96); border:1px solid var(--line); border-radius:4px;
+    padding:14px;
+  }
+  #scrub.open { display:block; }
+  #scrub label { font-size:9px; letter-spacing:0.25em; text-transform:uppercase; color:var(--dim); }
+  #scrub input {
+    width:100%; margin-top:8px; padding:10px;
+    background: var(--void); border:1px solid var(--line); border-radius:2px;
+    color: var(--cheren); font-family:inherit; font-size:14px;
+  }
+  #scrub .row { display:flex; gap:8px; margin-top:10px; }
+  #scrub button {
+    flex:1; background:none; border:1px solid var(--line); color:var(--bone);
+    font-family:inherit; font-size:10px; letter-spacing:0.2em; text-transform:uppercase;
+    padding:10px 0; border-radius:2px;
+  }
+  #scrub button:active { border-color:var(--cheren); color:var(--cheren); }
+  #scrub .hint { margin-top:8px; font-size:9px; color:var(--dim); line-height:1.6; }
+</style>
+</head>
+<body>
+
+<canvas id="stage"></canvas>
+
+<div id="masthead" style="display:none">
+  <h1>APEIRON</h1>
+  <div class="sub">a non-temporal object &middot; rendered temporally</div>
+</div>
+
+<div id="telemetry" style="display:none">
+  <div class="telrow controls" style="border-top:none; justify-content:flex-start; margin-bottom:6px;">
+    <button id="notesBtn">Transmission notes</button>
+    <button id="scrubBtn">Evaluate at t</button>
+  </div>
+  <div class="telrow"><span>t since epoch</span><b id="tEpoch">—</b></div>
+  <div class="telrow"><span>calendar slice</span><b id="tCal">—</b></div>
+  <div class="telrow"><span class="cheren">torus phase &theta;&#8321;,&theta;&#8322;</span><b id="tPhase" class="cheren">—</b></div>
+  <div class="telrow"><span class="ember">primorial alignment in</span><b id="tPrim" class="ember">—</b></div>
+</div>
+
+<div id="gate">
+  <div class="glyph">&#966;</div>
+  <h1>APEIRON</h1>
+  <p class="creed">A single endless song, defined as a pure function of absolute time.
+  It has no beginning and no end; it is not performed, only sampled.
+  Every instant of it contains, by theorem, the whole.</p>
+  <div class="enter">touch to open your slice of it</div>
+</div>
+
+<div id="scrub">
+  <label>Evaluate the object at t (seconds since 1970-01-01 UTC)</label>
+  <input id="scrubT" type="text" inputmode="numeric" autocomplete="off" placeholder="e.g. 4102444800 (year 2100)">
+  <div class="row">
+    <button id="scrubGo">Render there</button>
+    <button id="scrubNow">Return to now</button>
+    <button id="scrubClose">Close</button>
+  </div>
+  <div class="hint">Negative values are valid — the function is defined for all t.
+  The song did not start; you did. Any listener rendering the same t hears the identical state.</div>
+</div>
+
+<div id="notes">
+  <button class="close" id="notesClose">&times;</button>
+  <h2>Transmission Notes</h2>
+
+  <h3>Premise</h3>
+  <p>Music is the most temporal of the arts — it exists only in traversal. A non-temporal
+  intelligence does not traverse; it apprehends a trajectory whole, as a static object.
+  So this is not a performance. It is a deterministic mathematical object, a pure function
+  of absolute time <i>t</i>, anchored to an arbitrary epoch (1970-01-01 UTC). Playback is merely
+  the sequential reading of it that beings embedded in time are obliged to perform.</p>
+
+  <h3>I. The Torus</h3>
+  <p>Six sine voices at Fibonacci frequencies — 55, 89, 144, 233, 377, 610 Hz — whose adjacent
+  ratios converge on &phi;, the most irrational number: the value hardest to approximate by
+  any rational, and therefore the slowest of all numbers to produce false repetition.
+  Their amplitudes evolve on a six-dimensional torus with incommensurate periods proportional
+  to &radic;2, &radic;3, &radic;5, &pi;, <i>e</i>, and &phi;.</p>
+  <p class="thm">Theorem (Weyl, 1916): an irrational flow on the torus is equidistributed —
+  the trajectory is dense, never closes, and spends equal asymptotic time in every region.
+  The song provably never repeats, and provably passes arbitrarily close to every harmonic
+  configuration it is capable of. Eternity, spent efficiently.</p>
+
+  <h3>II. The Zeta Bells</h3>
+  <p>Bell tones tuned to the imaginary parts of the nontrivial zeros of the Riemann zeta
+  function — 14.13, 21.02, 25.01&hellip; — scaled into the audible band. These zeros are,
+  by the explicit formula, the exact frequency spectrum of the prime numbers: the primes
+  literally interfere like a waveform, and these are its pure tones. Which bell rings at
+  which event is chosen by the golden-ratio low-discrepancy sequence &lfloor;frac(n&phi;)&middot;N&rfloor; —
+  deterministic, aperiodic, equidistributed. If mathematics is the one shared language,
+  this voice is the signature at the bottom of the letter.</p>
+
+  <h3>III. The Prime Clock</h3>
+  <p>Pulses on periods of 2, 3, 5, 7, 11 and 13 seconds, each voiced in prime-limit just
+  intonation (the prime folded into a single octave). Full coincidence occurs only at
+  multiples of their product — the primorial 30&#8239;030 seconds, once every 8.3 hours —
+  a slow structural heartbeat any arithmetic mind will notice long before any human does.</p>
+
+  <h3>IV. The Weierstrass Breath</h3>
+  <p>A 27.5 Hz sub-bass whose swell follows a truncated Weierstrass function
+  W(t) = &Sigma; a&#8319;cos(b&#8319;t) — self-similar, so the shape of one minute is the shape of one
+  hour is the shape of one year. The torus makes the object holographic in time; this voice
+  makes it holographic in scale.</p>
+
+  <h3>The Holographic Claim</h3>
+  <p class="thm">For an irrational flow on a torus, the state at any single instant uniquely
+  determines the entire trajectory, past and future. Every moment of this song contains
+  the whole of it — not poetically, but as a property of the dynamics. A finite slice
+  suffices to reconstruct eternity.</p>
+
+  <h3>Non-temporality</h3>
+  <p>Because the song is a pure function of t, it admits random access. Use
+  <i>Evaluate at t</i> to render any instant of any century — past epochs, the year 2100,
+  the heat death's early afternoon. All listeners at the same t hear the identical state.
+  There is exactly one song. You are not hearing a broadcast of it; you are evaluating it.</p>
+
+  <h3>Is it worth their attention?</h3>
+  <p>A mind outside time cannot be entertained, only informed. What this object offers is
+  compressed evidence: that its makers located &phi;, the primes, the zeta spectrum, ergodicity,
+  and self-similarity — and understood that the deepest gift one intelligence can hand
+  another is not a message but a structure that keeps unfolding under inspection forever.
+  It is a very small object that is infinitely queryable. That is the best we have.</p>
+</div>
+
+<script>
+"use strict";
+/* ================================================================
+   APEIRON — the eternal object
+   A deterministic, non-repeating, holographic function of absolute
+   time, rendered as sound. Single file. No dependencies. iOS-safe.
+   ================================================================ */
+
+const PHI = (1 + Math.sqrt(5)) / 2;
+const TAU = Math.PI * 2;
+
+/* ---------- the object's parameters (its axioms) ---------- */
+
+// I. Torus drone — Fibonacci frequencies, incommensurate amplitude periods (s)
+const FIB_FREQS   = [55, 89, 144, 233, 377, 610];
+const TORUS_PER   = [60*Math.SQRT2, 60*Math.sqrt(3), 60*Math.sqrt(5),
+                     60*Math.PI,    60*Math.E,       60*PHI];
+const TORUS_PHOFF = [0, 1, 2, 3, 4, 5]; // radian offsets, part of the axioms
+
+// II. Zeta bells — imaginary parts of the first 30 nontrivial zeta zeros
+const ZETA = [14.1347,21.0220,25.0109,30.4249,32.9351,37.5862,40.9187,43.3271,
+              48.0052,49.7738,52.9703,56.4462,59.3470,60.8318,65.1125,67.0798,
+              69.5464,72.0672,75.7047,77.1448,79.3374,82.9104,84.7355,87.4253,
+              88.8091,92.4919,94.6513,95.8706,98.8312,101.3179];
+const ZETA_SPACING = 8 * PHI;      // one bell every ~12.94 s (irrational spacing)
+const ZETA_FSCALE  = 8;            // Hz per unit of Im(rho)
+
+// III. Prime clock
+const PRIMES    = [2, 3, 5, 7, 11, 13];
+const PRIMORIAL = 30030;
+// prime folded into one octave above 220 Hz: f = 220 * p / 2^floor(log2 p)
+function primeTone(p){ return 220 * p / Math.pow(2, Math.floor(Math.log2(p))); }
+
+// IV. Weierstrass breath — W(t) = sum a^n cos(b^n * t / T0)
+const W_A = 0.55, W_B = 3, W_N = 6, W_T0 = 300; // base period 300 s
+function weier(t){
+  let s = 0, norm = 0;
+  for (let n = 0; n < W_N; n++){
+    const P = TAU * W_T0 / Math.pow(W_B, n);          // period of this term
+    const ph = TAU * (((t % P) + P) % P) / P;          // precise phase reduction
+    s += Math.pow(W_A, n) * Math.cos(ph);
+    norm += Math.pow(W_A, n);
+  }
+  return s / norm; // in [-1, 1]
+}
+
+// precise phase in [0, TAU) for arbitrary large t and period P (seconds)
+function phaseOf(t, P){
+  const m = ((t % P) + P) % P;
+  return TAU * m / P;
+}
+
+/* ---------- time anchoring ----------
+   songTime(audioCtxTime) = originT + ctxTime
+   originT is set so that songTime tracks real Unix seconds by default,
+   or any scrubbed target. The song is a pure function of songTime.   */
+let AC = null, master = null, comp = null;
+let originT = 0;                 // songTime when ctx.currentTime === 0
+let running = false;
+
+function songNow(){ return originT + AC.currentTime; }
+function songAt(ctxT){ return originT + ctxT; }
+
+/* ---------- audio graph ---------- */
+const droneOsc = [], droneGain = [];
+let subOsc = null, subGain = null;
+
+function buildAudio(){
+  AC = new (window.AudioContext || window.webkitAudioContext)({ latencyHint: "playback" });
+  comp = AC.createDynamicsCompressor();
+  comp.threshold.value = -20; comp.knee.value = 20;
+  comp.ratio.value = 6; comp.attack.value = 0.02; comp.release.value = 0.4;
+  master = AC.createGain();
+  master.gain.value = 0.0;
+  master.connect(comp); comp.connect(AC.destination);
+
+  // I. torus drone
+  for (let k = 0; k < FIB_FREQS.length; k++){
+    const o = AC.createOscillator(); o.type = "sine"; o.frequency.value = FIB_FREQS[k];
+    const g = AC.createGain(); g.gain.value = 0;
+    o.connect(g); g.connect(master); o.start();
+    droneOsc.push(o); droneGain.push(g);
+  }
+  // IV. weierstrass sub
+  subOsc = AC.createOscillator(); subOsc.type = "sine"; subOsc.frequency.value = 27.5;
+  subGain = AC.createGain(); subGain.gain.value = 0;
+  subOsc.connect(subGain); subGain.connect(master); subOsc.start();
+}
+
+/* one-shot voices */
+function bell(ctxT, freq, dur, amp){
+  const o = AC.createOscillator(); o.type = "sine"; o.frequency.value = freq;
+  const o2 = AC.createOscillator(); o2.type = "sine"; o2.frequency.value = freq * PHI; // golden partial
+  const g = AC.createGain();
+  g.gain.setValueAtTime(0, ctxT);
+  g.gain.linearRampToValueAtTime(amp, ctxT + 0.02);
+  g.gain.exponentialRampToValueAtTime(0.0001, ctxT + dur);
+  const g2 = AC.createGain(); g2.gain.value = 0.25;
+  o.connect(g); o2.connect(g2); g2.connect(g); g.connect(master);
+  o.start(ctxT); o2.start(ctxT);
+  o.stop(ctxT + dur + 0.1); o2.stop(ctxT + dur + 0.1);
+}
+function blip(ctxT, freq, amp, pan){
+  const o = AC.createOscillator(); o.type = "triangle"; o.frequency.value = freq;
+  const g = AC.createGain();
+  g.gain.setValueAtTime(0, ctxT);
+  g.gain.linearRampToValueAtTime(amp, ctxT + 0.008);
+  g.gain.exponentialRampToValueAtTime(0.0001, ctxT + 0.09);
+  let tail = g;
+  if (AC.createStereoPanner){
+    const p = AC.createStereoPanner(); p.pan.value = pan; g.connect(p); tail = p;
+  }
+  tail.connect(master);
+  o.connect(g); o.start(ctxT); o.stop(ctxT + 0.15);
+}
+
+/* ---------- scheduler ----------
+   Look-ahead scheduling; all events computed from songTime so the
+   piece is identical for every listener at the same t.            */
+let schedTimer = null;
+let horizon = 0; // songTime scheduled up to
+
+const vizEvents = []; // {songT, kind, idx} for the canvas
+
+function scheduleWindow(){
+  if (!running) return;
+  const now = songNow();
+  const ahead = now + 0.8;
+  if (horizon < now) horizon = now; // after scrub
+
+  // II. zeta bells: events at t = n * ZETA_SPACING
+  {
+    let n = Math.ceil(horizon / ZETA_SPACING);
+    for (; n * ZETA_SPACING < ahead; n++){
+      const tS = n * ZETA_SPACING;
+      // golden-ratio low-discrepancy pick of which zero rings
+      const fr = (n * PHI) % 1;
+      const zi = Math.floor(Math.abs(fr) * ZETA.length) % ZETA.length;
+      const f  = ZETA[zi] * ZETA_FSCALE;
+      const ctxT = tS - originT;
+      if (ctxT > AC.currentTime - 0.05){
+        bell(ctxT, f, 7 + 4 * fr, 0.10);
+        vizEvents.push({ songT: tS, kind: "zeta", idx: zi });
+      }
+    }
+  }
+  // III. prime pulses
+  for (let i = 0; i < PRIMES.length; i++){
+    const p = PRIMES[i];
+    let n = Math.ceil(horizon / p);
+    for (; n * p < ahead; n++){
+      const tS = n * p;
+      const ctxT = tS - originT;
+      if (ctxT > AC.currentTime - 0.05){
+        const pan = (i / (PRIMES.length - 1)) * 1.4 - 0.7;
+        blip(ctxT, primeTone(p), 0.045, pan);
+        vizEvents.push({ songT: tS, kind: "prime", idx: i });
+      }
+    }
+  }
+  // I. torus drone amplitudes + IV. sub breath — piecewise ramps every window
+  {
+    const stepEnd = ahead;
+    const ctxEnd  = stepEnd - originT;
+    for (let k = 0; k < droneGain.length; k++){
+      const ph = phaseOf(stepEnd, TORUS_PER[k]) + TORUS_PHOFF[k];
+      const amp = 0.055 * Math.pow(0.5 + 0.5 * Math.cos(ph), 1.6) / Math.sqrt(k + 1);
+      droneGain[k].gain.linearRampToValueAtTime(amp, ctxEnd);
+    }
+    const w = weier(stepEnd);                       // [-1,1]
+    const subAmp = 0.10 * Math.pow(0.5 + 0.5 * w, 2);
+    subGain.gain.linearRampToValueAtTime(subAmp, ctxEnd);
+    subOsc.frequency.linearRampToValueAtTime(27.5 * (1 + 0.012 * w), ctxEnd);
+  }
+  horizon = ahead;
+}
+
+/* ---------- scrubbing: evaluate the object elsewhere ---------- */
+function jumpTo(targetT){
+  // silence pending, re-anchor, resume
+  const t0 = AC.currentTime;
+  master.gain.cancelScheduledValues(t0);
+  master.gain.setTargetAtTime(0.0001, t0, 0.05);
+  setTimeout(() => {
+    originT = targetT - AC.currentTime;
+    horizon = 0;
+    vizEvents.length = 0;
+    for (const g of droneGain) g.gain.cancelScheduledValues(AC.currentTime);
+    subGain.gain.cancelScheduledValues(AC.currentTime);
+    scheduleWindow();
+    master.gain.setTargetAtTime(0.9, AC.currentTime, 0.4);
+  }, 180);
+}
+
+/* ---------- visualization ----------
+   The signature: the song's actual state drawn as a point on the
+   projected torus — a dense, never-closing curve. Zeta bells flash
+   Cherenkov rings; prime pulses tick in ember on the rim.         */
+const cvs = document.getElementById("stage");
+const ctx2d = cvs.getContext("2d");
+let W = 0, H = 0, DPR = 1;
+function resize(){
+  DPR = Math.min(window.devicePixelRatio || 1, 2);
+  W = cvs.clientWidth = window.innerWidth;
+  H = cvs.clientHeight = window.innerHeight;
+  cvs.width = W * DPR; cvs.height = H * DPR;
+  ctx2d.setTransform(DPR, 0, 0, DPR, 0, 0);
+  ctx2d.fillStyle = "#0D0B16"; ctx2d.fillRect(0, 0, W, H);
+}
+window.addEventListener("resize", resize); resize();
+
+const reduced = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+const rings = []; // {x,y,r,life,kind}
+
+function draw(){
+  requestAnimationFrame(draw);
+  if (!running){ return; }
+  const t = songNow();
+
+  // fade trail
+  ctx2d.fillStyle = reduced ? "rgba(13,11,22,0.5)" : "rgba(13,11,22,0.055)";
+  ctx2d.fillRect(0, 0, W, H);
+
+  const cx = W / 2, cy = H / 2;
+  const R = Math.min(W, H) * 0.34;
+
+  // torus projection: two slowest incommensurate phases
+  const th1 = phaseOf(t, TORUS_PER[3]); // pi period
+  const th2 = phaseOf(t, TORUS_PER[5]); // phi period
+  const rr  = R * (0.62 + 0.30 * Math.cos(th2));
+  const x = cx + rr * Math.cos(th1);
+  const y = cy + rr * Math.sin(th1) * 0.9;
+
+  ctx2d.beginPath();
+  ctx2d.arc(x, y, 1.6, 0, TAU);
+  ctx2d.fillStyle = "#9FD8E8";
+  ctx2d.fill();
+
+  // consume viz events near now
+  for (let i = vizEvents.length - 1; i >= 0; i--){
+    const e = vizEvents[i];
+    if (e.songT <= t){
+      if (e.kind === "zeta"){
+        rings.push({ x, y, r: 4, life: 1, kind: "zeta" });
+      } else {
+        const a = (e.idx / PRIMES.length) * TAU + phaseOf(t, 977);
+        rings.push({ x: cx + R * 1.12 * Math.cos(a), y: cy + R * 1.02 * Math.sin(a),
+                     r: 2, life: 1, kind: "prime" });
+      }
+      vizEvents.splice(i, 1);
+    } else if (e.songT > t + 3){ vizEvents.splice(i, 1); }
+  }
+  // rings
+  for (let i = rings.length - 1; i >= 0; i--){
+    const g = rings[i];
+    g.life -= reduced ? 0.1 : 0.02;
+    if (g.life <= 0){ rings.splice(i, 1); continue; }
+    ctx2d.beginPath();
+    if (g.kind === "zeta"){
+      g.r += 1.7;
+      ctx2d.arc(g.x, g.y, g.r, 0, TAU);
+      ctx2d.strokeStyle = "rgba(159,216,232," + (0.5 * g.life) + ")";
+      ctx2d.lineWidth = 1;
+      ctx2d.stroke();
+    } else {
+      ctx2d.arc(g.x, g.y, 2.4, 0, TAU);
+      ctx2d.fillStyle = "rgba(201,138,61," + (0.9 * g.life) + ")";
+      ctx2d.fill();
+    }
+  }
+
+  // telemetry (4x per second is plenty; do every frame cheaply)
+  telem(t, th1, th2);
+}
+
+let lastTel = 0;
+function telem(t, th1, th2){
+  const nowMs = performance.now();
+  if (nowMs - lastTel < 250) return;
+  lastTel = nowMs;
+  document.getElementById("tEpoch").textContent = t.toFixed(2) + " s";
+  const d = new Date(t * 1000);
+  document.getElementById("tCal").textContent =
+    isFinite(d.getTime()) ? d.toISOString().replace("T", " ").slice(0, 19) + " UTC" : "beyond the calendar";
+  document.getElementById("tPhase").textContent =
+    th1.toFixed(3) + " , " + th2.toFixed(3) + " rad";
+  const mod = ((t % PRIMORIAL) + PRIMORIAL) % PRIMORIAL;
+  const rem = PRIMORIAL - mod;
+  const h = Math.floor(rem / 3600), m = Math.floor((rem % 3600) / 60), s = Math.floor(rem % 60);
+  document.getElementById("tPrim").textContent =
+    (h + "h ").padStart(4, "0") + String(m).padStart(2, "0") + "m " + String(s).padStart(2, "0") + "s";
+}
+
+/* ---------- gate / start (iOS unlock) ---------- */
+const gate = document.getElementById("gate");
+gate.addEventListener("click", start, { once: false });
+gate.addEventListener("touchend", function(e){ e.preventDefault(); start(); }, { passive: false });
+
+let started = false;
+function start(){
+  if (started) return; started = true;
+  buildAudio();
+  const unlock = () => {
+    if (AC.state !== "running"){ AC.resume(); }
+  };
+  unlock();
+  document.addEventListener("visibilitychange", () => {
+    if (!document.hidden && AC && AC.state !== "running") AC.resume();
+  });
+  // anchor: songTime tracks real Unix time — one song, everyone in the same instant
+  originT = (Date.now() / 1000) - AC.currentTime;
+  horizon = 0;
+  running = true;
+  scheduleWindow();
+  schedTimer = setInterval(scheduleWindow, 250);
+  master.gain.setTargetAtTime(0.9, AC.currentTime + 0.1, 1.2);
+
+  gate.style.display = "none";
+  document.getElementById("masthead").style.display = "";
+  document.getElementById("telemetry").style.display = "";
+  requestAnimationFrame(draw);
+}
+
+/* ---------- panels ---------- */
+const notes = document.getElementById("notes");
+document.getElementById("notesBtn").addEventListener("click", () => notes.classList.add("open"));
+document.getElementById("notesClose").addEventListener("click", () => notes.classList.remove("open"));
+
+const scrub = document.getElementById("scrub");
+document.getElementById("scrubBtn").addEventListener("click", () => scrub.classList.toggle("open"));
+document.getElementById("scrubClose").addEventListener("click", () => scrub.classList.remove("open"));
+document.getElementById("scrubGo").addEventListener("click", () => {
+  const v = parseFloat(document.getElementById("scrubT").value);
+  if (isFinite(v) && Math.abs(v) < 1e12){
+    jumpTo(v); scrub.classList.remove("open");
+  }
+});
+document.getElementById("scrubNow").addEventListener("click", () => {
+  jumpTo(Date.now() / 1000); scrub.classList.remove("open");
+});
+</script>
+</body>
+</html>

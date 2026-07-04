@@ -457,8 +457,10 @@ const ctx2d = cvs.getContext("2d");
 let W = 0, H = 0, DPR = 1;
 function resize(){
   DPR = Math.min(window.devicePixelRatio || 1, 2);
-  W = cvs.clientWidth = window.innerWidth;
-  H = cvs.clientHeight = window.innerHeight;
+  W = window.innerWidth;
+  H = window.innerHeight;
+  cvs.style.width = W + "px";
+  cvs.style.height = H + "px";
   cvs.width = W * DPR; cvs.height = H * DPR;
   ctx2d.setTransform(DPR, 0, 0, DPR, 0, 0);
   ctx2d.fillStyle = "#0D0B16"; ctx2d.fillRect(0, 0, W, H);

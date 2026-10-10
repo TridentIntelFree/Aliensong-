@@ -462,9 +462,9 @@ function scheduleWindow(){
       const voice = droneGain[k];
       const harmonicLift = 0.35 + 0.20 * Math.sin(stepEnd / TORUS_PER[k] + k);
 
-      voice.gain.linearRampToValueAtTime(amp * 0.75, ctxEnd);
-      voice.gain2.linearRampToValueAtTime(amp * harmonicLift, ctxEnd);
-      voice.gain3.linearRampToValueAtTime(amp * (harmonicLift * 0.45), ctxEnd);
+      voice.gain.gain.linearRampToValueAtTime(amp * 0.75, ctxEnd);
+      voice.gain2.gain.linearRampToValueAtTime(amp * harmonicLift, ctxEnd);
+      voice.gain3.gain.linearRampToValueAtTime(amp * (harmonicLift * 0.45), ctxEnd);
     }
 
     const w = weier(stepEnd);

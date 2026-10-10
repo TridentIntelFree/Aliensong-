@@ -688,10 +688,8 @@ function telem(t, th1, th2){
 }
 
 const gate = document.getElementById("gate");
-gate.addEventListener("click", start, { once: false });
-gate.addEventListener("touchend", function(e){ e.preventDefault(); start(); }, { passive: false });
-
 let started = false;
+
 function start(){
   if (started) return; started = true;
   buildAudio();
@@ -714,6 +712,36 @@ function start(){
   document.getElementById("telemetry").style.display = "";
   requestAnimationFrame(draw);
 }
+
+function attachGateStart(){
+  const activate = (event) => {
+    if (event && typeof event.preventDefault === "function") {
+      event.preventDefault();
+    }
+    start();
+  };
+
+  gate.addEventListener("click", activate, { passive: true, once: true });
+  gate.addEventListener("pointerdown", activate, { passive: false, once: true });
+  gate.addEventListener("touchstart", activate, { passive: false, once: true });
+
+  document.addEventListener("keydown", (event) => {
+    const key = event.key || "";
+    if (!started && (key === "Enter" || key === " " || key === "Spacebar")) {
+      event.preventDefault();
+      start();
+    }
+  });
+
+  document.body.addEventListener("pointerdown", (event) => {
+    if (!started && (event.target === document.body || event.target === document.documentElement || event.target === gate)) {
+      event.preventDefault();
+      start();
+    }
+  }, { passive: false });
+}
+
+attachGateStart();
 
 const notes = document.getElementById("notes");
 document.getElementById("notesBtn").addEventListener("click", () => notes.classList.add("open"));

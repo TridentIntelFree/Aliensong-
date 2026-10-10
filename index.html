@@ -12,8 +12,8 @@
     --deep:    #16122A;
     --bone:    #E9E3D3;
     --dim:     #8B8499;
-    --cheren:  #9FD8E8;  /* Cherenkov — torus / zeta light */
-    --ember:   #C98A3D;  /* prime events */
+    --cheren:  #9FD8E8;
+    --ember:   #C98A3D;
     --line:    #2A2440;
   }
   * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
@@ -27,7 +27,6 @@
   }
   #stage { position:fixed; inset:0; width:100%; height:100%; display:block; }
 
-  /* ---------- title ---------- */
   #masthead {
     position:fixed; top:calc(env(safe-area-inset-top, 0px) + 14px);
     left:0; right:0; text-align:center; pointer-events:none; z-index:5;
@@ -43,7 +42,6 @@
     color: var(--dim); text-transform: uppercase;
   }
 
-  /* ---------- telemetry ---------- */
   #telemetry {
     position:fixed; left:0; right:0;
     bottom: calc(env(safe-area-inset-bottom, 0px) + 12px);
@@ -59,7 +57,6 @@
   .telrow .ember  { color: var(--ember); }
   #telemetry .controls { pointer-events:auto; }
 
-  /* ---------- gate (start) ---------- */
   #gate {
     position:fixed; inset:0; z-index:20;
     display:flex; flex-direction:column; align-items:center; justify-content:center;
@@ -88,7 +85,6 @@
   @keyframes breathe { 0%,100%{opacity:0.45} 50%{opacity:1} }
   @media (prefers-reduced-motion: reduce) { #gate .enter { animation:none; opacity:0.85 } }
 
-  /* ---------- notes panel ---------- */
   #notesBtn, #scrubBtn {
     pointer-events:auto;
     background:none; border:1px solid var(--line); color:var(--dim);
@@ -125,7 +121,6 @@
     font-size:20px; color:var(--dim); background:none; border:none; padding:8px;
   }
 
-  /* ---------- scrub panel ---------- */
   #scrub {
     position:fixed; left:14px; right:14px;
     bottom: calc(env(safe-area-inset-bottom,0px) + 110px);
@@ -256,68 +251,50 @@
 
 <script>
 "use strict";
-/* ================================================================
-   APEIRON — the eternal object
-   A deterministic, non-repeating, holographic function of absolute
-   time, rendered as sound. Single file. No dependencies. iOS-safe.
-   ================================================================ */
-
 const PHI = (1 + Math.sqrt(5)) / 2;
 const TAU = Math.PI * 2;
 
-/* ---------- the object's parameters (its axioms) ---------- */
-
-// I. Torus drone — Fibonacci frequencies, incommensurate amplitude periods (s)
 const FIB_FREQS   = [55, 89, 144, 233, 377, 610];
 const TORUS_PER   = [60*Math.SQRT2, 60*Math.sqrt(3), 60*Math.sqrt(5),
-                     60*Math.PI,    60*Math.E,       60*PHI];
-const TORUS_PHOFF = [0, 1, 2, 3, 4, 5]; // radian offsets, part of the axioms
+                    60*Math.PI,    60*Math.E,       60*PHI];
+const TORUS_PHOFF = [0, 1, 2, 3, 4, 5];
 
-// II. Zeta bells — imaginary parts of the first 30 nontrivial zeta zeros
 const ZETA = [14.1347,21.0220,25.0109,30.4249,32.9351,37.5862,40.9187,43.3271,
               48.0052,49.7738,52.9703,56.4462,59.3470,60.8318,65.1125,67.0798,
               69.5464,72.0672,75.7047,77.1448,79.3374,82.9104,84.7355,87.4253,
               88.8091,92.4919,94.6513,95.8706,98.8312,101.3179];
-const ZETA_SPACING = 8 * PHI;      // one bell every ~12.94 s (irrational spacing)
-const ZETA_FSCALE  = 8;            // Hz per unit of Im(rho)
+const ZETA_SPACING = 8 * PHI;
+const ZETA_FSCALE  = 8;
 
-// III. Prime clock
 const PRIMES    = [2, 3, 5, 7, 11, 13];
+const PRIME_WAVEFORMS = ["triangle", "sine", "square", "sawtooth", "triangle", "sine"];
 const PRIMORIAL = 30030;
-// prime folded into one octave above 220 Hz: f = 220 * p / 2^floor(log2 p)
 function primeTone(p){ return 220 * p / Math.pow(2, Math.floor(Math.log2(p))); }
 
-// IV. Weierstrass breath — W(t) = sum a^n cos(b^n * t / T0)
-const W_A = 0.55, W_B = 3, W_N = 6, W_T0 = 300; // base period 300 s
+const W_A = 0.55, W_B = 3, W_N = 6, W_T0 = 300;
 function weier(t){
   let s = 0, norm = 0;
   for (let n = 0; n < W_N; n++){
-    const P = TAU * W_T0 / Math.pow(W_B, n);          // period of this term
-    const ph = TAU * (((t % P) + P) % P) / P;          // precise phase reduction
+    const P = TAU * W_T0 / Math.pow(W_B, n);
+    const ph = TAU * (((t % P) + P) % P) / P;
     s += Math.pow(W_A, n) * Math.cos(ph);
     norm += Math.pow(W_A, n);
   }
-  return s / norm; // in [-1, 1]
+  return s / norm;
 }
 
-// precise phase in [0, TAU) for arbitrary large t and period P (seconds)
 function phaseOf(t, P){
   const m = ((t % P) + P) % P;
   return TAU * m / P;
 }
 
-/* ---------- time anchoring ----------
-   songTime(audioCtxTime) = originT + ctxTime
-   originT is set so that songTime tracks real Unix seconds by default,
-   or any scrubbed target. The song is a pure function of songTime.   */
-let AC = null, master = null, comp = null;
-let originT = 0;                 // songTime when ctx.currentTime === 0
+let AC = null, master = null, comp = null, analyser = null;
+let originT = 0;
 let running = false;
 
 function songNow(){ return originT + AC.currentTime; }
 function songAt(ctxT){ return originT + ctxT; }
 
-/* ---------- audio graph ---------- */
 const droneOsc = [], droneGain = [];
 let subOsc = null, subGain = null;
 
@@ -326,81 +303,142 @@ function buildAudio(){
   comp = AC.createDynamicsCompressor();
   comp.threshold.value = -20; comp.knee.value = 20;
   comp.ratio.value = 6; comp.attack.value = 0.02; comp.release.value = 0.4;
+
+  analyser = AC.createAnalyser();
+  analyser.fftSize = 2048;
+  analyser.smoothingTimeConstant = 0.82;
+
   master = AC.createGain();
   master.gain.value = 0.0;
-  master.connect(comp); comp.connect(AC.destination);
+  master.connect(analyser);
+  analyser.connect(comp);
+  comp.connect(AC.destination);
 
-  // I. torus drone
   for (let k = 0; k < FIB_FREQS.length; k++){
-    const o = AC.createOscillator(); o.type = "sine"; o.frequency.value = FIB_FREQS[k];
-    const g = AC.createGain(); g.gain.value = 0;
-    o.connect(g); g.connect(master); o.start();
-    droneOsc.push(o); droneGain.push(g);
+    const primary = AC.createOscillator();
+    const overtoneA = AC.createOscillator();
+    const overtoneB = AC.createOscillator();
+
+    primary.type = "sine"; primary.frequency.value = FIB_FREQS[k];
+    overtoneA.type = "triangle"; overtoneA.frequency.value = FIB_FREQS[k] * 2.0;
+    overtoneB.type = "sine"; overtoneB.frequency.value = FIB_FREQS[k] * 3.0;
+
+    const gain1 = AC.createGain();
+    const gain2 = AC.createGain();
+    const gain3 = AC.createGain();
+    gain1.gain.value = 0;
+    gain2.gain.value = 0;
+    gain3.gain.value = 0;
+
+    primary.connect(gain1); overtoneA.connect(gain2); overtoneB.connect(gain3);
+    gain1.connect(master); gain2.connect(master); gain3.connect(master);
+
+    primary.start(); overtoneA.start(); overtoneB.start();
+    droneOsc.push(primary);
+    droneGain.push({ gain: gain1, gain2: gain2, gain3: gain3, overtoneA: overtoneA, overtoneB: overtoneB });
   }
-  // IV. weierstrass sub
+
   subOsc = AC.createOscillator(); subOsc.type = "sine"; subOsc.frequency.value = 27.5;
   subGain = AC.createGain(); subGain.gain.value = 0;
   subOsc.connect(subGain); subGain.connect(master); subOsc.start();
 }
 
-/* one-shot voices */
-function bell(ctxT, freq, dur, amp){
-  const o = AC.createOscillator(); o.type = "sine"; o.frequency.value = freq;
-  const o2 = AC.createOscillator(); o2.type = "sine"; o2.frequency.value = freq * PHI; // golden partial
+function bell(ctxT, freq, dur, amp, wobble = 0){
+  const o = AC.createOscillator(); o.type = "sine"; o.frequency.setValueAtTime(freq, ctxT);
+  const o2 = AC.createOscillator(); o2.type = "triangle"; o2.frequency.setValueAtTime(freq * PHI, ctxT);
+  const o3 = AC.createOscillator(); o3.type = "sine"; o3.frequency.setValueAtTime(freq * 2.0, ctxT);
+
   const g = AC.createGain();
-  g.gain.setValueAtTime(0, ctxT);
-  g.gain.linearRampToValueAtTime(amp, ctxT + 0.02);
+  const g2 = AC.createGain();
+  const g3 = AC.createGain();
+
+  const bendScale = 0.88 + 0.12 * Math.sin((freq + wobble) * 0.37);
+  const curveA = 0.92 + 0.08 * Math.sin((ctxT + wobble) * 0.9);
+  const curveB = 0.82 + 0.18 * Math.sin((ctxT + wobble) * 1.3);
+
+  o.frequency.linearRampToValueAtTime(freq * bendScale, ctxT + dur * 0.52);
+  o2.frequency.linearRampToValueAtTime(freq * PHI * curveA, ctxT + dur * 0.75);
+  o3.frequency.linearRampToValueAtTime(freq * 2.0 * curveB, ctxT + dur * 0.7);
+
+  g.gain.setValueAtTime(0.0001, ctxT);
+  g.gain.linearRampToValueAtTime(amp * 0.85, ctxT + 0.025);
   g.gain.exponentialRampToValueAtTime(0.0001, ctxT + dur);
-  const g2 = AC.createGain(); g2.gain.value = 0.25;
-  o.connect(g); o2.connect(g2); g2.connect(g); g.connect(master);
-  o.start(ctxT); o2.start(ctxT);
-  o.stop(ctxT + dur + 0.1); o2.stop(ctxT + dur + 0.1);
+
+  g2.gain.setValueAtTime(0.0001, ctxT);
+  g2.gain.linearRampToValueAtTime(amp * 0.32, ctxT + 0.018);
+  g2.gain.exponentialRampToValueAtTime(0.0001, ctxT + dur * 1.4);
+
+  g3.gain.setValueAtTime(0.0001, ctxT);
+  g3.gain.linearRampToValueAtTime(amp * 0.14, ctxT + 0.012);
+  g3.gain.exponentialRampToValueAtTime(0.0001, ctxT + dur * 1.8);
+
+  o.connect(g); o2.connect(g2); o3.connect(g3);
+  g.connect(master); g2.connect(master); g3.connect(master);
+
+  o.start(ctxT); o2.start(ctxT); o3.start(ctxT);
+  o.stop(ctxT + dur + 0.12); o2.stop(ctxT + dur + 0.12); o3.stop(ctxT + dur + 0.12);
 }
-function blip(ctxT, freq, amp, pan){
-  const o = AC.createOscillator(); o.type = "triangle"; o.frequency.value = freq;
+
+function blip(ctxT, freq, amp, pan, primeIndex){
+  const wave = PRIME_WAVEFORMS[primeIndex % PRIME_WAVEFORMS.length];
+  const o = AC.createOscillator();
+  const o2 = AC.createOscillator();
+  o.type = wave; o.frequency.value = freq;
+  o2.type = "sine"; o2.frequency.value = freq * 2.0;
+
   const g = AC.createGain();
+  const g2 = AC.createGain();
   g.gain.setValueAtTime(0, ctxT);
-  g.gain.linearRampToValueAtTime(amp, ctxT + 0.008);
-  g.gain.exponentialRampToValueAtTime(0.0001, ctxT + 0.09);
+  g.gain.linearRampToValueAtTime(amp * 0.85, ctxT + 0.008);
+  g.gain.exponentialRampToValueAtTime(0.0001, ctxT + 0.08 + primeIndex * 0.004);
+
+  g2.gain.setValueAtTime(0, ctxT);
+  g2.gain.linearRampToValueAtTime(amp * 0.22, ctxT + 0.006);
+  g2.gain.exponentialRampToValueAtTime(0.0001, ctxT + 0.12 + primeIndex * 0.005);
+
   let tail = g;
   if (AC.createStereoPanner){
-    const p = AC.createStereoPanner(); p.pan.value = pan; g.connect(p); tail = p;
+    const p = AC.createStereoPanner(); p.pan.value = pan;
+    const p2 = AC.createStereoPanner(); p2.pan.value = pan * 0.6;
+    g.connect(p); g2.connect(p2); tail = p;
+    p.connect(master); p2.connect(master);
+  } else {
+    g.connect(master); g2.connect(master);
   }
-  tail.connect(master);
-  o.connect(g); o.start(ctxT); o.stop(ctxT + 0.15);
+
+  o.connect(g); o2.connect(g2);
+  o.start(ctxT); o2.start(ctxT);
+  o.stop(ctxT + 0.16); o2.stop(ctxT + 0.18);
 }
 
-/* ---------- scheduler ----------
-   Look-ahead scheduling; all events computed from songTime so the
-   piece is identical for every listener at the same t.            */
 let schedTimer = null;
-let horizon = 0; // songTime scheduled up to
-
-const vizEvents = []; // {songT, kind, idx} for the canvas
+let horizon = 0;
+const vizEvents = [];
 
 function scheduleWindow(){
   if (!running) return;
   const now = songNow();
   const ahead = now + 0.8;
-  if (horizon < now) horizon = now; // after scrub
+  if (horizon < now) horizon = now;
 
-  // II. zeta bells: events at t = n * ZETA_SPACING
+  const dyn = 0.55 + 0.35 * (0.5 + 0.5 * Math.sin(now / 260));
+  master.gain.setTargetAtTime(dyn, AC.currentTime + 0.12, 1.3);
+
   {
     let n = Math.ceil(horizon / ZETA_SPACING);
     for (; n * ZETA_SPACING < ahead; n++){
       const tS = n * ZETA_SPACING;
-      // golden-ratio low-discrepancy pick of which zero rings
       const fr = (n * PHI) % 1;
       const zi = Math.floor(Math.abs(fr) * ZETA.length) % ZETA.length;
       const f  = ZETA[zi] * ZETA_FSCALE;
       const ctxT = tS - originT;
       if (ctxT > AC.currentTime - 0.05){
-        bell(ctxT, f, 7 + 4 * fr, 0.10);
+        bell(ctxT, f, 7 + 4 * fr, 0.10, zi + n);
         vizEvents.push({ songT: tS, kind: "zeta", idx: zi });
       }
     }
   }
-  // III. prime pulses
+
   for (let i = 0; i < PRIMES.length; i++){
     const p = PRIMES[i];
     let n = Math.ceil(horizon / p);
@@ -409,31 +447,36 @@ function scheduleWindow(){
       const ctxT = tS - originT;
       if (ctxT > AC.currentTime - 0.05){
         const pan = (i / (PRIMES.length - 1)) * 1.4 - 0.7;
-        blip(ctxT, primeTone(p), 0.045, pan);
+        blip(ctxT, primeTone(p), 0.055, pan, i);
         vizEvents.push({ songT: tS, kind: "prime", idx: i });
       }
     }
   }
-  // I. torus drone amplitudes + IV. sub breath — piecewise ramps every window
+
   {
     const stepEnd = ahead;
     const ctxEnd  = stepEnd - originT;
     for (let k = 0; k < droneGain.length; k++){
       const ph = phaseOf(stepEnd, TORUS_PER[k]) + TORUS_PHOFF[k];
       const amp = 0.055 * Math.pow(0.5 + 0.5 * Math.cos(ph), 1.6) / Math.sqrt(k + 1);
-      droneGain[k].gain.linearRampToValueAtTime(amp, ctxEnd);
+      const voice = droneGain[k];
+      const harmonicLift = 0.35 + 0.20 * Math.sin(stepEnd / TORUS_PER[k] + k);
+
+      voice.gain.linearRampToValueAtTime(amp * 0.75, ctxEnd);
+      voice.gain2.linearRampToValueAtTime(amp * harmonicLift, ctxEnd);
+      voice.gain3.linearRampToValueAtTime(amp * (harmonicLift * 0.45), ctxEnd);
     }
-    const w = weier(stepEnd);                       // [-1,1]
-    const subAmp = 0.10 * Math.pow(0.5 + 0.5 * w, 2);
+
+    const w = weier(stepEnd);
+    const subAmp = 0.12 * Math.pow(0.5 + 0.5 * w, 2);
     subGain.gain.linearRampToValueAtTime(subAmp, ctxEnd);
-    subOsc.frequency.linearRampToValueAtTime(27.5 * (1 + 0.012 * w), ctxEnd);
+    subOsc.frequency.linearRampToValueAtTime(27.5 * (1 + 0.014 * w), ctxEnd);
   }
+
   horizon = ahead;
 }
 
-/* ---------- scrubbing: evaluate the object elsewhere ---------- */
 function jumpTo(targetT){
-  // silence pending, re-anchor, resume
   const t0 = AC.currentTime;
   master.gain.cancelScheduledValues(t0);
   master.gain.setTargetAtTime(0.0001, t0, 0.05);
@@ -441,17 +484,17 @@ function jumpTo(targetT){
     originT = targetT - AC.currentTime;
     horizon = 0;
     vizEvents.length = 0;
-    for (const g of droneGain) g.gain.cancelScheduledValues(AC.currentTime);
+    for (const g of droneGain) {
+      g.gain.cancelScheduledValues(AC.currentTime);
+      g.gain2.cancelScheduledValues(AC.currentTime);
+      g.gain3.cancelScheduledValues(AC.currentTime);
+    }
     subGain.gain.cancelScheduledValues(AC.currentTime);
     scheduleWindow();
     master.gain.setTargetAtTime(0.9, AC.currentTime, 0.4);
   }, 180);
 }
 
-/* ---------- visualization ----------
-   The signature: the song's actual state drawn as a point on the
-   projected torus — a dense, never-closing curve. Zeta bells flash
-   Cherenkov rings; prime pulses tick in ember on the rim.         */
 const cvs = document.getElementById("stage");
 const ctx2d = cvs.getContext("2d");
 let W = 0, H = 0, DPR = 1;
@@ -468,33 +511,129 @@ function resize(){
 window.addEventListener("resize", resize); resize();
 
 const reduced = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-const rings = []; // {x,y,r,life,kind}
+const rings = [];
+
+function drawTorusField(t){
+  const cx = W / 2, cy = H / 2;
+  const major = Math.min(W, H) * 0.22;
+  const minor = Math.min(W, H) * 0.09;
+  const rotX = t * 0.18;
+  const rotY = t * 0.23 + 0.7;
+
+  for (let ring = 0; ring < 18; ring++){
+    const v = ring / 18 * TAU;
+    ctx2d.beginPath();
+    let started = false;
+    for (let u = 0; u <= TAU + 0.08; u += 0.08) {
+      const x = (major + minor * Math.cos(v)) * Math.cos(u);
+      const y = (major + minor * Math.cos(v)) * Math.sin(u);
+      const z = minor * Math.sin(v);
+
+      let x1 = x * Math.cos(rotX) - z * Math.sin(rotX);
+      let z1 = x * Math.sin(rotX) + z * Math.cos(rotX);
+      let y1 = y * Math.cos(rotY) - z1 * Math.sin(rotY);
+      let z2 = y * Math.sin(rotY) + z1 * Math.cos(rotY);
+      const depth = 860 / (860 + z2 + 170);
+      const px = cx + x1 * depth;
+      const py = cy + y1 * depth;
+
+      if (!started) {
+        ctx2d.moveTo(px, py);
+        started = true;
+      } else {
+        ctx2d.lineTo(px, py);
+      }
+    }
+    ctx2d.strokeStyle = "rgba(159,216,232," + (0.08 + ring / 35) + ")";
+    ctx2d.lineWidth = 0.8;
+    ctx2d.stroke();
+  }
+
+  for (let ring = 0; ring < 12; ring++){
+    const u = ring / 12 * TAU;
+    ctx2d.beginPath();
+    let started = false;
+    for (let v = 0; v <= TAU + 0.08; v += 0.08) {
+      const x = (major + minor * Math.cos(v)) * Math.cos(u);
+      const y = (major + minor * Math.cos(v)) * Math.sin(u);
+      const z = minor * Math.sin(v);
+
+      let x1 = x * Math.cos(rotX) - z * Math.sin(rotX);
+      let z1 = x * Math.sin(rotX) + z * Math.cos(rotX);
+      let y1 = y * Math.cos(rotY) - z1 * Math.sin(rotY);
+      let z2 = y * Math.sin(rotY) + z1 * Math.cos(rotY);
+      const depth = 860 / (860 + z2 + 170);
+      const px = cx + x1 * depth;
+      const py = cy + y1 * depth;
+
+      if (!started) {
+        ctx2d.moveTo(px, py);
+        started = true;
+      } else {
+        ctx2d.lineTo(px, py);
+      }
+    }
+    ctx2d.strokeStyle = "rgba(201,138,61," + (0.06 + ring / 40) + ")";
+    ctx2d.lineWidth = 0.7;
+    ctx2d.stroke();
+  }
+}
+
+function drawSpectrum(t){
+  if (!analyser) return;
+  const freqData = new Uint8Array(analyser.frequencyBinCount);
+  analyser.getByteFrequencyData(freqData);
+  const left = 32;
+  const top = H - 100;
+  const barWidth = 4;
+  const gap = 2;
+  const maxBars = Math.min(150, Math.floor((W - left * 2) / (barWidth + gap)));
+
+  for (let i = 0; i < maxBars; i++) {
+    const s = freqData[Math.floor(i / maxBars * freqData.length)] / 255;
+    const h = 34 + s * 90;
+    const x = left + i * (barWidth + gap);
+    const y = top + (1 - s) * 56;
+    const barH = s * 58;
+
+    ctx2d.fillStyle = "rgba(159,216,232," + (0.12 + s * 0.75) + ")";
+    ctx2d.fillRect(x, y, barWidth, barH);
+
+    ctx2d.fillStyle = "rgba(201,138,61," + (0.08 + s * 0.6) + ")";
+    ctx2d.fillRect(x, top + 60, barWidth, 4 + s * 24);
+  }
+}
 
 function draw(){
   requestAnimationFrame(draw);
   if (!running){ return; }
   const t = songNow();
 
-  // fade trail
-  ctx2d.fillStyle = reduced ? "rgba(13,11,22,0.5)" : "rgba(13,11,22,0.055)";
+  const bg = ctx2d.createRadialGradient(W * 0.5, H * 0.45, 0, W * 0.5, H * 0.5, Math.max(W, H) * 0.7);
+  bg.addColorStop(0, "rgba(22,18,42,0.62)");
+  bg.addColorStop(0.5, "rgba(13,11,22,0.72)");
+  bg.addColorStop(1, "rgba(13,11,22,0.96)");
+  ctx2d.fillStyle = bg;
   ctx2d.fillRect(0, 0, W, H);
+
+  drawTorusField(t);
 
   const cx = W / 2, cy = H / 2;
   const R = Math.min(W, H) * 0.34;
-
-  // torus projection: two slowest incommensurate phases
-  const th1 = phaseOf(t, TORUS_PER[3]); // pi period
-  const th2 = phaseOf(t, TORUS_PER[5]); // phi period
+  const th1 = phaseOf(t, TORUS_PER[3]);
+  const th2 = phaseOf(t, TORUS_PER[5]);
   const rr  = R * (0.62 + 0.30 * Math.cos(th2));
   const x = cx + rr * Math.cos(th1);
   const y = cy + rr * Math.sin(th1) * 0.9;
 
   ctx2d.beginPath();
-  ctx2d.arc(x, y, 1.6, 0, TAU);
+  ctx2d.arc(x, y, 2.1, 0, TAU);
   ctx2d.fillStyle = "#9FD8E8";
+  ctx2d.shadowColor = "rgba(159,216,232,0.9)";
+  ctx2d.shadowBlur = 18;
   ctx2d.fill();
+  ctx2d.shadowBlur = 0;
 
-  // consume viz events near now
   for (let i = vizEvents.length - 1; i >= 0; i--){
     const e = vizEvents[i];
     if (e.songT <= t){
@@ -502,32 +641,31 @@ function draw(){
         rings.push({ x, y, r: 4, life: 1, kind: "zeta" });
       } else {
         const a = (e.idx / PRIMES.length) * TAU + phaseOf(t, 977);
-        rings.push({ x: cx + R * 1.12 * Math.cos(a), y: cy + R * 1.02 * Math.sin(a),
-                     r: 2, life: 1, kind: "prime" });
+        rings.push({ x: cx + R * 1.12 * Math.cos(a), y: cy + R * 1.02 * Math.sin(a), r: 2, life: 1, kind: "prime" });
       }
       vizEvents.splice(i, 1);
     } else if (e.songT > t + 3){ vizEvents.splice(i, 1); }
   }
-  // rings
+
   for (let i = rings.length - 1; i >= 0; i--){
     const g = rings[i];
     g.life -= reduced ? 0.1 : 0.02;
     if (g.life <= 0){ rings.splice(i, 1); continue; }
     ctx2d.beginPath();
     if (g.kind === "zeta"){
-      g.r += 1.7;
+      g.r += 1.8;
       ctx2d.arc(g.x, g.y, g.r, 0, TAU);
       ctx2d.strokeStyle = "rgba(159,216,232," + (0.5 * g.life) + ")";
       ctx2d.lineWidth = 1;
       ctx2d.stroke();
     } else {
-      ctx2d.arc(g.x, g.y, 2.4, 0, TAU);
+      ctx2d.arc(g.x, g.y, 2.6, 0, TAU);
       ctx2d.fillStyle = "rgba(201,138,61," + (0.9 * g.life) + ")";
       ctx2d.fill();
     }
   }
 
-  // telemetry (4x per second is plenty; do every frame cheaply)
+  drawSpectrum(t);
   telem(t, th1, th2);
 }
 
@@ -549,7 +687,6 @@ function telem(t, th1, th2){
     (h + "h ").padStart(4, "0") + String(m).padStart(2, "0") + "m " + String(s).padStart(2, "0") + "s";
 }
 
-/* ---------- gate / start (iOS unlock) ---------- */
 const gate = document.getElementById("gate");
 gate.addEventListener("click", start, { once: false });
 gate.addEventListener("touchend", function(e){ e.preventDefault(); start(); }, { passive: false });
@@ -565,7 +702,6 @@ function start(){
   document.addEventListener("visibilitychange", () => {
     if (!document.hidden && AC && AC.state !== "running") AC.resume();
   });
-  // anchor: songTime tracks real Unix time — one song, everyone in the same instant
   originT = (Date.now() / 1000) - AC.currentTime;
   horizon = 0;
   running = true;
@@ -579,7 +715,6 @@ function start(){
   requestAnimationFrame(draw);
 }
 
-/* ---------- panels ---------- */
 const notes = document.getElementById("notes");
 document.getElementById("notesBtn").addEventListener("click", () => notes.classList.add("open"));
 document.getElementById("notesClose").addEventListener("click", () => notes.classList.remove("open"));

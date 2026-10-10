@@ -198,11 +198,11 @@
   the sequential reading of it that beings embedded in time are obliged to perform.</p>
 
   <h3>I. The Torus</h3>
-  <p>Six sine voices at Fibonacci frequencies — 55, 89, 144, 233, 377, 610 Hz — whose adjacent
-  ratios converge on &phi;, the most irrational number: the value hardest to approximate by
-  any rational, and therefore the slowest of all numbers to produce false repetition.
-  Their amplitudes evolve on a six-dimensional torus with incommensurate periods proportional
-  to &radic;2, &radic;3, &radic;5, &pi;, <i>e</i>, and &phi;.</p>
+  <p>Six warm sine voices sounding a pure A-major chord in just intonation — 55, 82.5, 110,
+  137.5, 165, 220 Hz. Their amplitudes evolve on a six-dimensional torus with incommensurate
+  periods proportional to &radic;2, &radic;3, &radic;5, &pi;, <i>e</i>, and &phi; — &phi; being the
+  most irrational number, the value hardest to approximate by any rational, and therefore the
+  slowest of all numbers to produce false repetition.</p>
   <p class="thm">Theorem (Weyl, 1916): an irrational flow on the torus is equidistributed —
   the trajectory is dense, never closes, and spends equal asymptotic time in every region.
   The song provably never repeats, and provably passes arbitrarily close to every harmonic
@@ -210,17 +210,21 @@
 
   <h3>II. The Zeta Bells</h3>
   <p>Bell tones tuned to the imaginary parts of the nontrivial zeros of the Riemann zeta
-  function — 14.13, 21.02, 25.01&hellip; — scaled into the audible band. These zeros are,
+  function — 14.13, 21.02, 25.01&hellip; — scaled into the audible band and settled onto the
+  nearest note of a just-intoned pentatonic scale, so every bell agrees. These zeros are,
   by the explicit formula, the exact frequency spectrum of the prime numbers: the primes
   literally interfere like a waveform, and these are its pure tones. Which bell rings at
   which event is chosen by the golden-ratio low-discrepancy sequence &lfloor;frac(n&phi;)&middot;N&rfloor; —
-  deterministic, aperiodic, equidistributed. If mathematics is the one shared language,
+  deterministic, aperiodic, equidistributed. A softer bell answers an octave higher at the
+  golden section of each gap. If mathematics is the one shared language,
   this voice is the signature at the bottom of the letter.</p>
 
   <h3>III. The Prime Clock</h3>
-  <p>Pulses on periods of 2, 3, 5, 7, 11 and 13 seconds, each voiced in prime-limit just
-  intonation (the prime folded into a single octave). Full coincidence occurs only at
-  multiples of their product — the primorial 30&#8239;030 seconds, once every 8.3 hours —
+  <p>Small chimes on periods of 2, 3, 5, 7, 11 and 13 seconds, each tuned to one note of the
+  same pentatonic scale, struck with a velocity drawn from frac(n&phi;) so no two strokes
+  sound alike. When the 11 and 13 second chimes coincide — every 143 seconds — a gong sounds.
+  Full coincidence of all six occurs only at multiples of their product — the primorial
+  30&#8239;030 seconds, once every 8.3 hours — and is marked by the deepest gong:
   a slow structural heartbeat any arithmetic mind will notice long before any human does.</p>
 
   <h3>IV. The Weierstrass Breath</h3>
@@ -254,10 +258,31 @@
 const PHI = (1 + Math.sqrt(5)) / 2;
 const TAU = Math.PI * 2;
 
-const FIB_FREQS   = [55, 89, 144, 233, 377, 610];
 const TORUS_PER   = [60*Math.SQRT2, 60*Math.sqrt(3), 60*Math.sqrt(5),
                     60*Math.PI,    60*Math.E,       60*PHI];
 const TORUS_PHOFF = [0, 1, 2, 3, 4, 5];
+
+// Every voice is tuned to one just-intonation major pentatonic on A,
+// so any two sounds that meet are consonant.
+const PENTA = [1, 9/8, 5/4, 3/2, 5/3];
+function pentaNote(degree, base = 110){
+  const oct = Math.floor(degree / PENTA.length);
+  const idx = ((degree % PENTA.length) + PENTA.length) % PENTA.length;
+  return base * Math.pow(2, oct) * PENTA[idx];
+}
+const PENTA_LADDER = [];
+for (let d = 0; d < 21; d++) PENTA_LADDER.push(pentaNote(d));   // 110 Hz .. 3520 Hz
+function nearestPenta(f){
+  let best = PENTA_LADDER[0], bestD = Infinity;
+  for (const n of PENTA_LADDER){
+    const d = Math.abs(Math.log2(f / n));
+    if (d < bestD){ bestD = d; best = n; }
+  }
+  return best;
+}
+
+// Drone: the six torus voices sound a pure A/E/C# chord instead of raw Fibonacci Hz.
+const DRONE_FREQS = [55, 82.5, 110, 137.5, 165, 220];
 
 const ZETA = [14.1347,21.0220,25.0109,30.4249,32.9351,37.5862,40.9187,43.3271,
               48.0052,49.7738,52.9703,56.4462,59.3470,60.8318,65.1125,67.0798,
@@ -265,11 +290,15 @@ const ZETA = [14.1347,21.0220,25.0109,30.4249,32.9351,37.5862,40.9187,43.3271,
               88.8091,92.4919,94.6513,95.8706,98.8312,101.3179];
 const ZETA_SPACING = 8 * PHI;
 const ZETA_FSCALE  = 8;
+// Each zeta zero, scaled into the audible band, rings the nearest pentatonic bell.
+const ZETA_BELLS = ZETA.map(z => nearestPenta(z * ZETA_FSCALE));
 
 const PRIMES    = [2, 3, 5, 7, 11, 13];
-const PRIME_WAVEFORMS = ["triangle", "sine", "square", "sawtooth", "triangle", "sine"];
 const PRIMORIAL = 30030;
-function primeTone(p){ return 220 * p / Math.pow(2, Math.floor(Math.log2(p))); }
+// Prime clock chimes: 2 -> A, 3 -> E, 5 -> C#, then B, F#, and A an octave up.
+const PRIME_CHIMES = [880, 1320, 1100, 990, 1466.67, 1760];
+// A gong sounds when the 11 s and 13 s pulses coincide; the primorial is a multiple of it.
+const GONG_PERIOD = 11 * 13;
 
 const W_A = 0.55, W_B = 3, W_N = 6, W_T0 = 300;
 function weier(t){
@@ -288,6 +317,8 @@ function phaseOf(t, P){
   return TAU * m / P;
 }
 
+function frac(x){ return x - Math.floor(x); }
+
 let AC = null, master = null, comp = null, analyser = null;
 let originT = 0;
 let running = false;
@@ -298,11 +329,29 @@ function songAt(ctxT){ return originT + ctxT; }
 const droneOsc = [], droneGain = [];
 let subOsc = null, subGain = null;
 
+// Deterministic stereo impulse response for a soft hall reverb.
+function makeReverb(seconds){
+  const len = Math.floor(AC.sampleRate * seconds);
+  const buf = AC.createBuffer(2, len, AC.sampleRate);
+  let seed = 1618033;
+  for (let ch = 0; ch < 2; ch++){
+    const data = buf.getChannelData(ch);
+    for (let i = 0; i < len; i++){
+      seed = (seed * 1103515245 + 12345) >>> 0;
+      const noise = (seed / 4294967296) * 2 - 1;
+      data[i] = noise * Math.pow(1 - i / len, 3.2);
+    }
+  }
+  const conv = AC.createConvolver();
+  conv.buffer = buf;
+  return conv;
+}
+
 function buildAudio(){
   AC = new (window.AudioContext || window.webkitAudioContext)({ latencyHint: "playback" });
   comp = AC.createDynamicsCompressor();
-  comp.threshold.value = -20; comp.knee.value = 20;
-  comp.ratio.value = 6; comp.attack.value = 0.02; comp.release.value = 0.4;
+  comp.threshold.value = -18; comp.knee.value = 24;
+  comp.ratio.value = 4; comp.attack.value = 0.02; comp.release.value = 0.5;
 
   analyser = AC.createAnalyser();
   analyser.fftSize = 2048;
@@ -310,18 +359,26 @@ function buildAudio(){
 
   master = AC.createGain();
   master.gain.value = 0.0;
-  master.connect(analyser);
-  analyser.connect(comp);
-  comp.connect(AC.destination);
 
-  for (let k = 0; k < FIB_FREQS.length; k++){
+  const dry = AC.createGain(); dry.gain.value = 1.2;
+  const wet = AC.createGain(); wet.gain.value = 0.9;
+  const verb = makeReverb(4.5);
+  master.connect(dry); dry.connect(analyser);
+  master.connect(verb); verb.connect(wet); wet.connect(analyser);
+  analyser.connect(comp);
+  const makeup = AC.createGain(); makeup.gain.value = 2.0;
+  comp.connect(makeup); makeup.connect(AC.destination);
+
+  for (let k = 0; k < DRONE_FREQS.length; k++){
+    const f = DRONE_FREQS[k];
     const primary = AC.createOscillator();
     const overtoneA = AC.createOscillator();
     const overtoneB = AC.createOscillator();
 
-    primary.type = "sine"; primary.frequency.value = FIB_FREQS[k];
-    overtoneA.type = "triangle"; overtoneA.frequency.value = FIB_FREQS[k] * 2.0;
-    overtoneB.type = "sine"; overtoneB.frequency.value = FIB_FREQS[k] * 3.0;
+    // A pure sine, its octave, and a slightly detuned twin for a slow, warm beating.
+    primary.type = "sine"; primary.frequency.value = f;
+    overtoneA.type = "sine"; overtoneA.frequency.value = f * 2.0;
+    overtoneB.type = "sine"; overtoneB.frequency.value = f + 0.12 * (k + 1);
 
     const gain1 = AC.createGain();
     const gain2 = AC.createGain();
@@ -343,77 +400,83 @@ function buildAudio(){
   subOsc.connect(subGain); subGain.connect(master); subOsc.start();
 }
 
-function bell(ctxT, freq, dur, amp, wobble = 0){
-  const o = AC.createOscillator(); o.type = "sine"; o.frequency.setValueAtTime(freq, ctxT);
-  const o2 = AC.createOscillator(); o2.type = "triangle"; o2.frequency.setValueAtTime(freq * PHI, ctxT);
-  const o3 = AC.createOscillator(); o3.type = "sine"; o3.frequency.setValueAtTime(freq * 2.0, ctxT);
-
-  const g = AC.createGain();
-  const g2 = AC.createGain();
-  const g3 = AC.createGain();
-
-  const bendScale = 0.88 + 0.12 * Math.sin((freq + wobble) * 0.37);
-  const curveA = 0.92 + 0.08 * Math.sin((ctxT + wobble) * 0.9);
-  const curveB = 0.82 + 0.18 * Math.sin((ctxT + wobble) * 1.3);
-
-  o.frequency.linearRampToValueAtTime(freq * bendScale, ctxT + dur * 0.52);
-  o2.frequency.linearRampToValueAtTime(freq * PHI * curveA, ctxT + dur * 0.75);
-  o3.frequency.linearRampToValueAtTime(freq * 2.0 * curveB, ctxT + dur * 0.7);
-
-  g.gain.setValueAtTime(0.0001, ctxT);
-  g.gain.linearRampToValueAtTime(amp * 0.85, ctxT + 0.025);
-  g.gain.exponentialRampToValueAtTime(0.0001, ctxT + dur);
-
-  g2.gain.setValueAtTime(0.0001, ctxT);
-  g2.gain.linearRampToValueAtTime(amp * 0.32, ctxT + 0.018);
-  g2.gain.exponentialRampToValueAtTime(0.0001, ctxT + dur * 1.4);
-
-  g3.gain.setValueAtTime(0.0001, ctxT);
-  g3.gain.linearRampToValueAtTime(amp * 0.14, ctxT + 0.012);
-  g3.gain.exponentialRampToValueAtTime(0.0001, ctxT + dur * 1.8);
-
-  o.connect(g); o2.connect(g2); o3.connect(g3);
-  g.connect(master); g2.connect(master); g3.connect(master);
-
-  o.start(ctxT); o2.start(ctxT); o3.start(ctxT);
-  o.stop(ctxT + dur + 0.12); o2.stop(ctxT + dur + 0.12); o3.stop(ctxT + dur + 0.12);
-}
-
-function blip(ctxT, freq, amp, pan, primeIndex){
-  const wave = PRIME_WAVEFORMS[primeIndex % PRIME_WAVEFORMS.length];
-  const o = AC.createOscillator();
-  const o2 = AC.createOscillator();
-  o.type = wave; o.frequency.value = freq;
-  o2.type = "sine"; o2.frequency.value = freq * 2.0;
-
-  const g = AC.createGain();
-  const g2 = AC.createGain();
-  g.gain.setValueAtTime(0, ctxT);
-  g.gain.linearRampToValueAtTime(amp * 0.85, ctxT + 0.008);
-  g.gain.exponentialRampToValueAtTime(0.0001, ctxT + 0.08 + primeIndex * 0.004);
-
-  g2.gain.setValueAtTime(0, ctxT);
-  g2.gain.linearRampToValueAtTime(amp * 0.22, ctxT + 0.006);
-  g2.gain.exponentialRampToValueAtTime(0.0001, ctxT + 0.12 + primeIndex * 0.005);
-
-  let tail = g;
+// Shared struck-metal voice: a set of sine partials, each with its own
+// level, ring time and attack, panned together.
+function strike(ctxT, freq, amp, pan, partials, attack){
+  const out = AC.createGain(); out.gain.value = amp;
+  let tail = out;
   if (AC.createStereoPanner){
     const p = AC.createStereoPanner(); p.pan.value = pan;
-    const p2 = AC.createStereoPanner(); p2.pan.value = pan * 0.6;
-    g.connect(p); g2.connect(p2); tail = p;
-    p.connect(master); p2.connect(master);
-  } else {
-    g.connect(master); g2.connect(master);
+    out.connect(p); tail = p;
   }
+  tail.connect(master);
 
-  o.connect(g); o2.connect(g2);
-  o.start(ctxT); o2.start(ctxT);
-  o.stop(ctxT + 0.16); o2.stop(ctxT + 0.18);
+  let end = ctxT;
+  for (const [ratio, level, ring, bloom = 0] of partials){
+    const o = AC.createOscillator(); o.type = "sine";
+    o.frequency.setValueAtTime(freq * ratio, ctxT);
+    const g = AC.createGain();
+    const peak = ctxT + attack + bloom;
+    g.gain.setValueAtTime(0.0001, ctxT);
+    g.gain.exponentialRampToValueAtTime(level, peak);
+    g.gain.exponentialRampToValueAtTime(0.0001, peak + ring);
+    o.connect(g); g.connect(out);
+    o.start(ctxT); o.stop(peak + ring + 0.05);
+    end = Math.max(end, peak + ring);
+  }
+  return end;
+}
+
+// Church-style bell: hum, prime, tierce, quint and nominal partials,
+// low partials ringing longest, plus a detuned twin for shimmer.
+function bell(ctxT, freq, dur, amp, pan = 0){
+  strike(ctxT, freq, amp, pan, [
+    [0.5,    0.30, dur * 1.3],
+    [1.0,    1.00, dur],
+    [1.003,  0.45, dur * 0.9],
+    [1.2,    0.22, dur * 0.55],
+    [1.5,    0.25, dur * 0.5],
+    [2.0,    0.40, dur * 0.45],
+    [2.51,   0.10, dur * 0.25],
+    [3.0,    0.08, dur * 0.2],
+  ], 0.004);
+}
+
+// Small tuned chime: bright, short, with the inharmonic overtones of a metal bar.
+function chime(ctxT, freq, amp, pan){
+  strike(ctxT, freq, amp, pan, [
+    [1.0,  1.00, 2.6],
+    [2.76, 0.28, 1.1],
+    [5.40, 0.10, 0.45],
+  ], 0.002);
+}
+
+// Gong: deep fundamental with inharmonic partials that bloom in after the
+// strike and decay slowly.
+function gong(ctxT, freq, amp){
+  strike(ctxT, freq, amp, 0, [
+    [1.0,   1.00, 14],
+    [1.41,  0.35, 11, 0.25],
+    [1.89,  0.28, 9,  0.45],
+    [2.52,  0.20, 7,  0.7],
+    [2.98,  0.14, 6,  0.9],
+    [3.61,  0.09, 4.5, 1.1],
+    [4.53,  0.05, 3.5, 1.3],
+  ], 0.012);
 }
 
 let schedTimer = null;
 let horizon = 0;
 const vizEvents = [];
+
+// Calls fn(n, tS) for each grid time tS = n * period + offset in [horizon, ahead).
+function eachOnGrid(period, offset, ahead, fn){
+  let n = Math.ceil((horizon - offset) / period);
+  for (; n * period + offset < ahead; n++){
+    const tS = n * period + offset;
+    if (tS - originT > AC.currentTime - 0.05) fn(n, tS);
+  }
+}
 
 function scheduleWindow(){
   if (!running) return;
@@ -424,47 +487,54 @@ function scheduleWindow(){
   const dyn = 0.55 + 0.35 * (0.5 + 0.5 * Math.sin(now / 260));
   master.gain.setTargetAtTime(dyn, AC.currentTime + 0.12, 1.3);
 
-  {
-    let n = Math.ceil(horizon / ZETA_SPACING);
-    for (; n * ZETA_SPACING < ahead; n++){
-      const tS = n * ZETA_SPACING;
-      const fr = (n * PHI) % 1;
-      const zi = Math.floor(Math.abs(fr) * ZETA.length) % ZETA.length;
-      const f  = ZETA[zi] * ZETA_FSCALE;
-      const ctxT = tS - originT;
-      if (ctxT > AC.currentTime - 0.05){
-        bell(ctxT, f, 7 + 4 * fr, 0.10, zi + n);
-        vizEvents.push({ songT: tS, kind: "zeta", idx: zi });
-      }
-    }
-  }
+  // Zeta bells, chosen by the golden-ratio sequence frac(n*phi).
+  eachOnGrid(ZETA_SPACING, 0, ahead, (n, tS) => {
+    const fr = frac(n * PHI);
+    const zi = Math.floor(fr * ZETA.length) % ZETA.length;
+    const pan = 0.5 * Math.sin(n * PHI * TAU);
+    bell(tS - originT, ZETA_BELLS[zi], 6 + 4 * fr, 0.075, pan);
+    vizEvents.push({ songT: tS, kind: "zeta", idx: zi });
+  });
 
+  // An answering bell, softer, placed at the golden section of each gap.
+  eachOnGrid(ZETA_SPACING, ZETA_SPACING / PHI, ahead, (n, tS) => {
+    const fr = frac(n * PHI * PHI);
+    const zi = Math.floor(fr * ZETA.length) % ZETA.length;
+    const pan = -0.5 * Math.sin(n * PHI * TAU);
+    bell(tS - originT, ZETA_BELLS[zi] * 2, 4 + 2 * fr, 0.035, pan);
+  });
+
+  // Prime clock chimes; velocity follows frac(n*phi) so repeats never sound mechanical.
   for (let i = 0; i < PRIMES.length; i++){
     const p = PRIMES[i];
-    let n = Math.ceil(horizon / p);
-    for (; n * p < ahead; n++){
-      const tS = n * p;
-      const ctxT = tS - originT;
-      if (ctxT > AC.currentTime - 0.05){
-        const pan = (i / (PRIMES.length - 1)) * 1.4 - 0.7;
-        blip(ctxT, primeTone(p), 0.055, pan, i);
-        vizEvents.push({ songT: tS, kind: "prime", idx: i });
-      }
-    }
+    eachOnGrid(p, 0, ahead, (n, tS) => {
+      const pan = (i / (PRIMES.length - 1)) * 1.4 - 0.7;
+      const vel = 0.35 + 0.65 * frac(n * PHI + i * 0.31);
+      const weight = 0.010 + 0.004 * i;   // the frequent 2 s and 3 s pulses stay quietest
+      chime(tS - originT, PRIME_CHIMES[i], weight * vel, pan);
+      vizEvents.push({ songT: tS, kind: "prime", idx: i });
+    });
   }
+
+  // Gongs at 11/13 coincidences; the full primorial alignment gets the deepest one.
+  eachOnGrid(GONG_PERIOD, 0, ahead, (n, tS) => {
+    const primorial = ((tS % PRIMORIAL) + PRIMORIAL) % PRIMORIAL === 0;
+    gong(tS - originT, primorial ? 55 : 110, primorial ? 0.16 : 0.09);
+    vizEvents.push({ songT: tS, kind: "zeta", idx: 0 });
+  });
 
   {
     const stepEnd = ahead;
     const ctxEnd  = stepEnd - originT;
     for (let k = 0; k < droneGain.length; k++){
       const ph = phaseOf(stepEnd, TORUS_PER[k]) + TORUS_PHOFF[k];
-      const amp = 0.055 * Math.pow(0.5 + 0.5 * Math.cos(ph), 1.6) / Math.sqrt(k + 1);
+      const amp = 0.05 * Math.pow(0.5 + 0.5 * Math.cos(ph), 1.6) / Math.sqrt(k + 1);
       const voice = droneGain[k];
-      const harmonicLift = 0.35 + 0.20 * Math.sin(stepEnd / TORUS_PER[k] + k);
+      const harmonicLift = 0.25 + 0.15 * Math.sin(stepEnd / TORUS_PER[k] + k);
 
       voice.gain.gain.linearRampToValueAtTime(amp * 0.75, ctxEnd);
       voice.gain2.gain.linearRampToValueAtTime(amp * harmonicLift, ctxEnd);
-      voice.gain3.gain.linearRampToValueAtTime(amp * (harmonicLift * 0.45), ctxEnd);
+      voice.gain3.gain.linearRampToValueAtTime(amp * 0.5, ctxEnd);
     }
 
     const w = weier(stepEnd);
@@ -485,9 +555,9 @@ function jumpTo(targetT){
     horizon = 0;
     vizEvents.length = 0;
     for (const g of droneGain) {
-      g.gain.cancelScheduledValues(AC.currentTime);
-      g.gain2.cancelScheduledValues(AC.currentTime);
-      g.gain3.cancelScheduledValues(AC.currentTime);
+      g.gain.gain.cancelScheduledValues(AC.currentTime);
+      g.gain2.gain.cancelScheduledValues(AC.currentTime);
+      g.gain3.gain.cancelScheduledValues(AC.currentTime);
     }
     subGain.gain.cancelScheduledValues(AC.currentTime);
     scheduleWindow();
